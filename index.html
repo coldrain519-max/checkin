@@ -49,8 +49,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC'
 .checkin-btn.locked{background:var(--green);border-color:var(--green);cursor:default}
 .task-list{display:none;padding:0 12px 8px}
 .day-card.open .task-list{display:block}
-.task-item{display:flex;align-items:flex-start;padding:7px 8px;margin-bottom:3px;border-radius:8px;background:#f9f9fb;cursor:pointer;transition:background .15s}
-.task-item:active{background:#eee}
+.task-item{display:flex;align-items:flex-start;padding:7px 8px;margin-bottom:3px;border-radius:8px;background:#f9f9fb;cursor:default;pointer-events:none;transition:background .15s}
+.day-card.editable .task-item{cursor:pointer;pointer-events:auto}
 .day-card.locked .task-item{cursor:default;pointer-events:none;opacity:.75}
 .task-check{width:20px;height:20px;border-radius:50%;border:2px solid #d1d1d6;margin-right:8px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .task-check.done{background:var(--green);border-color:var(--green)}
@@ -161,10 +161,10 @@ function dayDone(di){var ts=getDayTasks(di);return ts.length>0&&ts.every(functio
 function setSync(s){var d=document.getElementById('syncDot'),t=document.getElementById('syncText');d.className='sync-dot '+s;if(s==='online'){t.textContent='\u5DF2\u540C\u6B65 \u00B7 \u591A\u8BBE\u5907\u6570\u636E\u4E92\u901A';syncOk=1}else if(s==='syncing')t.textContent='\u540C\u6B65\u4E2D\u2026';else{t.textContent='\u79BB\u7EBF\u6A21\u5F0F \u00B7 \u6570\u636E\u6682\u5B58\u672C\u5730';syncOk=0}}
 function loadState(){try{var s=localStorage.getItem(LS_KEY);if(s){checkState=JSON.parse(s);renderAll()}}catch(e){}fetch(API+'&select=state,version',{headers:HEADERS}).then(function(r){if(!r.ok)throw Error(r.status);return r.json()}).then(function(d){if(d&&d.length>0){checkState=d[0].state||{};syncVersion=d[0].version||0;localStorage.setItem(LS_KEY,JSON.stringify(checkState))}setSync('online');renderAll()}).catch(function(){setSync('offline');renderAll()})}
 function saveState(){localStorage.setItem(LS_KEY,JSON.stringify(checkState));syncVersion++;var body=JSON.stringify({state:checkState,version:syncVersion,updated_at:new Date().toISOString()});fetch(API,{method:'PATCH',headers:HEADERS,body:body}).then(function(r){if(r.status===404||r.status===204){return fetch(SUPABASE_URL+'/rest/v1/checkin',{method:'POST',headers:HEADERS,body:JSON.stringify({id:'singleton',state:checkState,version:syncVersion,updated_at:new Date().toISOString()})}).then(function(r2){if(!r2.ok&&r2.status!==201)throw Error(r2.status)})}if(!r.ok)throw Error(r.status);setSync('online')}).catch(function(){syncVersion--;setSync('offline')})}
-function pollSync(){fetch(API+'&select=state,version',{headers:HEADERS}).then(function(r){if(!r.ok){setSync('offline');return}r.json().then(function(d){if(d&&d.length>0&&d[0].version>syncVersion){checkState=d[0].state||{};syncVersion=d[0].version;localStorage.setItem(LS_KEY,JSON.stringify(checkState));var od={};document.querySelectorAll('.day-card.open').forEach(function(c){od[c.dataset.day]=1});renderAll();Object.keys(od).forEach(function(d){var el=document.querySelector('.day-card[data-day="'+d+'"]');if(el)el.classList.add('open')})}setSync('online')})}).catch(function(){setSync('offline')})}
+function pollSync(){fetch(API+'&select=state,version',{headers:HEADERS}).then(function(r){if(!r.ok){setSync('offline');return}r.json().then(function(d){if(d&&d.length>0&&d[0].version>syncVersion){checkState=d[0].state||{};syncVersion=d[0].version;localStorage.setItem(LS_KEY,JSON.stringify(checkState));var od={};document.querySelectorAll('.day-card.open').forEach(function(c){od[c.dataset.day]=c.classList.contains('editable')?2:1});renderAll();Object.keys(od).forEach(function(d){var el=document.querySelector('.day-card[data-day="'+d+'"]');if(el){el.classList.add('open');if(od[d]===2)el.classList.add('editable')}})}setSync('online')})}).catch(function(){setSync('offline')})}
 
-function toggleTask(di,tid){if(dayDone(di))return;checkState[di+'_'+tid]=!checkState[di+'_'+tid];var openDays={};document.querySelectorAll('.day-card.open').forEach(function(c){openDays[c.dataset.day]=1});saveState();renderAll();Object.keys(openDays).forEach(function(d){var el=document.querySelector('.day-card[data-day="'+d+'"]');if(el)el.classList.add('open')})}
-function closeDay(di){document.querySelector('.day-card[data-day="'+di+'"]').classList.remove('open');saveState()}
+function toggleTask(di,tid){if(dayDone(di))return;checkState[di+'_'+tid]=!checkState[di+'_'+tid];var od={};document.querySelectorAll('.day-card.open').forEach(function(c){od[c.dataset.day]=c.classList.contains('editable')?2:1});saveState();renderAll();Object.keys(od).forEach(function(d){var el=document.querySelector('.day-card[data-day="'+d+'"]');if(el){el.classList.add('open');if(od[d]===2)el.classList.add('editable')}})}
+function closeDay(di){var c=document.querySelector('.day-card[data-day="'+di+'"]');c.classList.remove('open','editable');saveState()}
 
 var activePhase=null;
 function renderPhaseTabs(){document.getElementById('phaseTabs').innerHTML=phases.map(function(p){var total=0,done=0;for(var i=p.start;i<=p.end;i++){var ts=getDayTasks(i);total+=ts.length;done+=ts.filter(function(t){return td(i,t.id)}).length}var pct=total>0?Math.round(done/total*100):0;return '<div class="phase-tab'+(activePhase===p.id||(!activePhase&&p.id==='p1')?' active':'')+'" data-phase="'+p.id+'" onclick="switchPhase(\''+p.id+'\')"><span class="dot" style="background:'+p.color+'"></span>'+p.name+' '+p.range+' '+pct+'%</div>'}).join('')}
@@ -192,7 +192,7 @@ function renderDays(filter){
   document.getElementById('daysContainer').innerHTML=h;
 }
 
-function openDay(di){document.querySelector('.day-card[data-day="'+di+'"]').classList.add('open')}
+function openDay(di){var c=document.querySelector('.day-card[data-day="'+di+'"]');c.classList.add('open','editable')}
 function renderProgress(){var total=0,done=0;for(var i=0;i<totalDays;i++){var ts=getDayTasks(i);total+=ts.length;done+=ts.filter(function(t){return td(i,t.id)}).length}var raw=total>0?done/total*100:0,pct=raw<1&&raw>0?raw.toFixed(1):Math.round(raw);document.getElementById('progressPercent').textContent=pct+'%';document.getElementById('progressFill').style.width=raw+'%'}
 function renderAll(){renderPhaseTabs();renderStats();renderDays(activePhase);renderProgress()}
 function switchPhase(id){activePhase=id;renderAll();document.getElementById('daysContainer').scrollIntoView({behavior:'smooth'})}
