@@ -180,7 +180,7 @@ function renderDays(filter){
     var wk=Math.floor(i/7);
     if(wk!==cw){cw=wk;var we=new Date(d);we.setDate(we.getDate()+(6-d.getDay()));if(we>endDate)we.setTime(endDate.getTime());h+='<div class="week-label">\uD83D\uDCC5 \u7B2C'+(wk+1)+'\u5468 \u00B7 '+fmt(d)+' \u2014 '+fmt(we)+'</div>'}
     var ts=getDayTasks(i),dc=ts.filter(function(t){return td(i,t.id)}).length;
-    h+='<div class="day-card'+(locked?' locked':'')+'" data-day="'+i+'"><div class="day-header"><div class="day-dot'+(locked||dayDone(i)?' checked':'')+'"></div><div class="day-date">'+fmt(d)+' '+dn(d)+'</div><div class="day-phase-tag" style="background:'+p.color+'20;color:'+p.color+'">'+p.name.replace(/[^\u4e00-\u9fa5]/g,'').slice(0,5)+'</div><div class="day-check-count">'+dc+'/'+ts.length+'</div>';
+    h+='<div class="day-card'+(locked?' locked':'')+'" data-day="'+i+'"><div class="day-header" onclick="this.parentElement.classList.toggle(\'open\')"><div class="day-dot'+(locked||dayDone(i)?' checked':'')+'"></div><div class="day-date">'+fmt(d)+' '+dn(d)+'</div><div class="day-phase-tag" style="background:'+p.color+'20;color:'+p.color+'">'+p.name.replace(/[^\u4e00-\u9fa5]/g,'').slice(0,5)+'</div><div class="day-check-count">'+dc+'/'+ts.length+'</div>';
     if(locked){h+='<span class="checkin-btn locked">\u2705\u5DF2\u6253\u5361</span>'}
     else{h+='<button class="checkin-btn" onclick="event.stopPropagation();openDay('+i+')">\u6253\u5361</button>'}
     h+='<div class="day-arrow">\u25BC</div></div>';
